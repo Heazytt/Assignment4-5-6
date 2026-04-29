@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package user;
+
+option go_package = "github.com/sre-project/microservices/proto/userpb";
+
+service UserService {
+  rpc GetUser(GetUserRequest) returns (UserResponse);
+}
+
+message GetUserRequest {
+  int64 id = 1;
+}
+
+message UserResponse {
+  int64 id = 1;
+  string email = 2;
+  string name = 3;
+}

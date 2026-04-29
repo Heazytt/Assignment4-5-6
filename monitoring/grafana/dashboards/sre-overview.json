@@ -1,0 +1,87 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "title": "SRE Microservices Overview",
+  "uid": "sre-overview",
+  "version": 1,
+  "schemaVersion": 39,
+  "refresh": "10s",
+  "time": { "from": "now-30m", "to": "now" },
+  "tags": ["sre", "microservices"],
+  "templating": { "list": [] },
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Services UP",
+      "id": 1,
+      "gridPos": { "h": 6, "w": 8, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "service_up", "legendFormat": "{{service}}", "refId": "A" }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": 0 },
+              { "color": "green", "value": 1 }
+            ]
+          },
+          "mappings": [
+            { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
+          ]
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "value_and_name" }
+    },
+    {
+      "type": "timeseries",
+      "title": "HTTP Requests / s by service",
+      "id": 2,
+      "gridPos": { "h": 8, "w": 16, "x": 8, "y": 0 },
+      "targets": [
+        { "expr": "sum by (service) (rate(http_requests_total[1m]))", "legendFormat": "{{service}}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "5xx error rate by service",
+      "id": 3,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        { "expr": "sum by (service) (rate(http_requests_total{status=~\"5..\"}[1m]))", "legendFormat": "{{service}}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "p95 HTTP latency (s)",
+      "id": 4,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "targets": [
+        { "expr": "histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{service}}", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "Business operations (orders, logins, ...)",
+      "id": 5,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "targets": [
+        { "expr": "sum by (service, operation, result) (rate(business_operations_total[1m]))", "legendFormat": "{{service}}: {{operation}} ({{result}})", "refId": "A" }
+      ]
+    },
+    {
+      "type": "timeseries",
+      "title": "External calls (gRPC / RabbitMQ)",
+      "id": 6,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "targets": [
+        { "expr": "sum by (service, target, result) (rate(external_calls_total[1m]))", "legendFormat": "{{service}} -> {{target}} ({{result}})", "refId": "A" }
+      ]
+    }
+  ]
+}

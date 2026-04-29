@@ -1,0 +1,16 @@
+# =============================================================
+# INCIDENT SIMULATION OVERRIDE
+# =============================================================
+# Apply with:
+#   docker compose -f docker-compose.yml -f docker-compose.broken.yml up -d order-service
+#
+# This sets DB_HOST to a non-existent hostname, reproducing the
+# scenario described in the assignment: "A failure shall be
+# introduced in the Order Service, caused by incorrect database
+# configuration (e.g. invalid connection string or hostname)."
+# =============================================================
+
+services:
+  order-service:
+    environment:
+      DB_HOST: postgres-typo   # <-- intentionally wrong (was: postgres)

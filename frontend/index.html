@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SRE Microservices Demo</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<header>
+  <h1>SRE Microservices Demo</h1>
+  <div id="userBar">
+    <span id="userInfo"></span>
+    <button id="logoutBtn" hidden>Logout</button>
+  </div>
+</header>
+
+<main>
+
+<section id="authSection">
+  <h2>Authentication</h2>
+  <div class="row">
+    <div class="card">
+      <h3>Register</h3>
+      <input id="regEmail" placeholder="email" />
+      <input id="regName"  placeholder="name" />
+      <input id="regPass"  placeholder="password" type="password" />
+      <button onclick="register()">Register</button>
+    </div>
+    <div class="card">
+      <h3>Login</h3>
+      <input id="loginEmail" placeholder="email" />
+      <input id="loginPass"  placeholder="password" type="password" />
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
+</section>
+
+<section id="appSection" hidden>
+  <h2>Products</h2>
+  <button onclick="loadProducts()">Refresh</button>
+  <div id="products" class="grid"></div>
+
+  <h2>My Cart</h2>
+  <div id="cart"></div>
+  <button onclick="checkout()">Checkout</button>
+
+  <h2>My Orders</h2>
+  <button onclick="loadOrders()">Refresh Orders</button>
+  <div id="orders"></div>
+
+  <h2>Chat</h2>
+  <div class="row">
+    <input id="chatTo" placeholder="recipient user id" type="number" style="max-width: 220px" />
+    <input id="chatMsg" placeholder="message" />
+    <button onclick="sendChat()">Send</button>
+    <button onclick="loadInbox()">Refresh Inbox</button>
+  </div>
+  <div id="chatBox"></div>
+</section>
+
+<section id="logSection">
+  <h2>Activity Log</h2>
+  <pre id="log"></pre>
+</section>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.env
+*.log
+go.sum
+/bin/
+/tmp/
+.DS_Store
+
+terraform/terraform.tfvars
