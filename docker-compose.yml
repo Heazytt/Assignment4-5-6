@@ -6,7 +6,7 @@ x-go-build: &go-build
 
 x-common-env: &common-env
   LOG_LEVEL: ${LOG_LEVEL:-info}
-  JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
+  JWT_SECRET: ${JWT_SECRET}
   DB_HOST: postgres
   DB_PORT: 5432
   DB_USER: ${POSTGRES_USER:-app}

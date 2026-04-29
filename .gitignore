@@ -6,3 +6,6 @@ go.sum
 .DS_Store
 
 terraform/terraform.tfvars
+terraform/.terraform
+terraform/terraform.tfstate
+terraform/.terraform.lock.hcl
