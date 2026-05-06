@@ -6,7 +6,7 @@ x-go-build: &go-build
 
 x-common-env: &common-env
   LOG_LEVEL: ${LOG_LEVEL:-info}
-  JWT_SECRET: ${JWT_SECRET}
+  JWT_SECRET: ${JWT_SECRET:-change-me-in-prod}
   DB_HOST: postgres
   DB_PORT: 5432
   DB_USER: ${POSTGRES_USER:-app}
@@ -14,6 +14,14 @@ x-common-env: &common-env
   DB_NAME: ${POSTGRES_DB:-app}
   DB_SSLMODE: disable
   RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672/
+
+# Reusable healthcheck for Go services - all expose /health on port 8080.
+x-go-healthcheck: &go-healthcheck
+  test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+  interval: 10s
+  timeout: 3s
+  retries: 5
+  start_period: 20s
 
 services:
   postgres:
@@ -33,6 +41,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
     networks: [appnet]
 
   rabbitmq:
@@ -49,6 +62,11 @@ services:
       interval: 10s
       timeout: 10s
       retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 384M
     networks: [appnet]
 
   auth-service:
@@ -60,10 +78,16 @@ services:
     environment:
       <<: *common-env
       HTTP_PORT: "8080"
+    healthcheck: *go-healthcheck
     depends_on:
       postgres: { condition: service_healthy }
-    networks: [appnet]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
     restart: unless-stopped
+    networks: [appnet]
 
   user-service:
     build:
@@ -75,10 +99,16 @@ services:
       <<: *common-env
       HTTP_PORT: "8080"
       GRPC_PORT: "9000"
+    healthcheck: *go-healthcheck
     depends_on:
       postgres: { condition: service_healthy }
-    networks: [appnet]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
     restart: unless-stopped
+    networks: [appnet]
 
   product-service:
     build:
@@ -90,10 +120,16 @@ services:
       <<: *common-env
       HTTP_PORT: "8080"
       GRPC_PORT: "9000"
+    healthcheck: *go-healthcheck
     depends_on:
       postgres: { condition: service_healthy }
-    networks: [appnet]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
     restart: unless-stopped
+    networks: [appnet]
 
   order-service:
     build:
@@ -106,13 +142,19 @@ services:
       HTTP_PORT: "8080"
       USER_GRPC_ADDR: user-service:9000
       PRODUCT_GRPC_ADDR: product-service:9000
+    healthcheck: *go-healthcheck
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
       user-service: { condition: service_started }
       product-service: { condition: service_started }
-    networks: [appnet]
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'        # order-service is the most resource-hungry
+          memory: 256M
     restart: unless-stopped
+    networks: [appnet]
 
   chat-service:
     build:
@@ -123,11 +165,17 @@ services:
     environment:
       <<: *common-env
       HTTP_PORT: "8080"
+    healthcheck: *go-healthcheck
     depends_on:
       postgres: { condition: service_healthy }
       rabbitmq: { condition: service_healthy }
-    networks: [appnet]
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
     restart: unless-stopped
+    networks: [appnet]
 
   nginx:
     build:
@@ -142,19 +190,60 @@ services:
       - product-service
       - order-service
       - chat-service
-    networks: [appnet]
     restart: unless-stopped
+    networks: [appnet]
 
   prometheus:
     image: prom/prometheus:v2.54.1
     container_name: prometheus
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml:ro
       - promdata:/prometheus
     ports:
       - "9090:9090"
-    networks: [appnet]
     restart: unless-stopped
+    networks: [appnet]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    container_name: alertmanager
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports:
+      - "9093:9093"
+    restart: unless-stopped
+    networks: [appnet]
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    container_name: cadvisor
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    devices:
+      - /dev/kmsg
+    privileged: true
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    networks: [appnet]
+
+  node-exporter:
+    image: prom/node-exporter:v1.8.1
+    container_name: node-exporter
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "9100:9100"
+    restart: unless-stopped
+    networks: [appnet]
 
   grafana:
     image: grafana/grafana:11.2.0
@@ -171,8 +260,8 @@ services:
       - "3000:3000"
     depends_on:
       - prometheus
-    networks: [appnet]
     restart: unless-stopped
+    networks: [appnet]
 
 volumes:
   pgdata:

@@ -4,13 +4,13 @@
   "fiscalYearStartMonth": 0,
   "graphTooltip": 0,
   "id": null,
-  "title": "SRE Microservices Overview",
+  "title": "SRE Microservices — Overview & Capacity",
   "uid": "sre-overview",
-  "version": 1,
+  "version": 2,
   "schemaVersion": 39,
   "refresh": "10s",
   "time": { "from": "now-30m", "to": "now" },
-  "tags": ["sre", "microservices"],
+  "tags": ["sre", "microservices", "capacity"],
   "templating": { "list": [] },
   "panels": [
     {
@@ -33,8 +33,7 @@
           "mappings": [
             { "options": { "0": { "text": "DOWN" }, "1": { "text": "UP" } }, "type": "value" }
           ]
-        },
-        "overrides": []
+        }
       },
       "options": { "colorMode": "background", "graphMode": "none", "justifyMode": "auto", "textMode": "value_and_name" }
     },
@@ -66,10 +65,79 @@
       ]
     },
     {
+      "type": "row",
+      "title": "Capacity & Resources",
+      "id": 100,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 16 },
+      "collapsed": false
+    },
+    {
       "type": "timeseries",
-      "title": "Business operations (orders, logins, ...)",
-      "id": 5,
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "title": "CPU usage per container (cores)",
+      "id": 10,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 17 },
+      "targets": [
+        { "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name!=\"\"}[1m]))", "legendFormat": "{{name}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "none" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Memory usage per container (MB)",
+      "id": 11,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 17 },
+      "targets": [
+        { "expr": "container_memory_usage_bytes{name!=\"\"} / 1024 / 1024", "legendFormat": "{{name}}", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "decmbytes" } }
+    },
+    {
+      "type": "timeseries",
+      "title": "Network I/O per container (B/s)",
+      "id": 12,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 25 },
+      "targets": [
+        { "expr": "sum by (name) (rate(container_network_receive_bytes_total{name!=\"\"}[1m]))", "legendFormat": "{{name}} RX", "refId": "A" },
+        { "expr": "sum by (name) (rate(container_network_transmit_bytes_total{name!=\"\"}[1m]))", "legendFormat": "{{name}} TX", "refId": "B" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "Bps" } }
+    },
+    {
+      "type": "stat",
+      "title": "Host CPU (%)",
+      "id": 13,
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 25 },
+      "targets": [
+        { "expr": "100 - (avg(rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "green", "value": 0 }, { "color": "yellow", "value": 60 }, { "color": "red", "value": 85 }
+      ]}}}
+    },
+    {
+      "type": "stat",
+      "title": "Host RAM (%)",
+      "id": 14,
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 25 },
+      "targets": [
+        { "expr": "(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100", "refId": "A" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "percent", "thresholds": { "mode": "absolute", "steps": [
+        { "color": "green", "value": 0 }, { "color": "yellow", "value": 70 }, { "color": "red", "value": 85 }
+      ]}}}
+    },
+    {
+      "type": "row",
+      "title": "Business Operations",
+      "id": 200,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 33 },
+      "collapsed": false
+    },
+    {
+      "type": "timeseries",
+      "title": "Business operations rate",
+      "id": 20,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
       "targets": [
         { "expr": "sum by (service, operation, result) (rate(business_operations_total[1m]))", "legendFormat": "{{service}}: {{operation}} ({{result}})", "refId": "A" }
       ]
@@ -77,8 +145,8 @@
     {
       "type": "timeseries",
       "title": "External calls (gRPC / RabbitMQ)",
-      "id": 6,
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 21,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
       "targets": [
         { "expr": "sum by (service, target, result) (rate(external_calls_total[1m]))", "legendFormat": "{{service}} -> {{target}} ({{result}})", "refId": "A" }
       ]

@@ -1,0 +1,96 @@
+groups:
+  - name: service_health
+    interval: 30s
+    rules:
+      - alert: ServiceDown
+        expr: up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.job }} is DOWN"
+          description: "Prometheus cannot scrape {{ $labels.job }} for >30s. The container is likely crash-looping or unreachable."
+
+      - alert: ServiceUpZero
+        expr: service_up == 0
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Service {{ $labels.service }} reports unhealthy"
+          description: "{{ $labels.service }} has set service_up=0, meaning startup failed (e.g. cannot connect to DB)."
+
+  - name: error_rate
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: sum by (service) (rate(http_requests_total{status=~"5.."}[1m])) > 0.1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High 5xx error rate on {{ $labels.service }}"
+          description: "{{ $labels.service }} is returning 5xx errors at >0.1 req/s for the last minute."
+
+      - alert: VeryHighErrorRate
+        expr: sum by (service) (rate(http_requests_total{status=~"5.."}[1m])) > 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "VERY high error rate on {{ $labels.service }}"
+          description: "{{ $labels.service }} is returning 5xx errors at >1 req/s — likely a major outage."
+
+  - name: latency
+    interval: 30s
+    rules:
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le, service) (rate(http_request_duration_seconds_bucket[5m]))) > 1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High p95 latency on {{ $labels.service }}"
+          description: "p95 HTTP latency on {{ $labels.service }} is >1s for 2min — performance degradation."
+
+  - name: container_resources
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: rate(container_cpu_usage_seconds_total{name=~".+"}[1m]) * 100 > 80
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU on container {{ $labels.name }}"
+          description: "Container {{ $labels.name }} CPU usage is above 80% for 2 minutes."
+
+      - alert: HighMemoryUsage
+        expr: (container_memory_usage_bytes{name=~".+"} / container_spec_memory_limit_bytes{name=~".+"}) * 100 > 85
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory on container {{ $labels.name }}"
+          description: "Container {{ $labels.name }} memory usage is above 85% of its limit."
+
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds{name=~".+"}[5m]) > 1
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} keeps restarting"
+          description: "Container {{ $labels.name }} restarted more than once in the last 5 minutes — possible crash loop."
+
+  - name: external_dependencies
+    interval: 30s
+    rules:
+      - alert: ExternalCallFailures
+        expr: sum by (service, target) (rate(external_calls_total{result="error"}[2m])) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "{{ $labels.service }} failing calls to {{ $labels.target }}"
+          description: "Error rate on outbound calls to {{ $labels.target }} from {{ $labels.service }} is elevated."
